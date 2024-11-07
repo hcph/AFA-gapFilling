@@ -1,0 +1,21 @@
+#版本1 30hifi30ont，版本2 50hifi30ont，版本3 50hifi
+#以3B染色体为列子
+#第一步：
+#从30HIFI30ONT_chr对照.xlsx中调取版本1中3B染色体对应的scaffold
+cd /data/home/hechao/20240629/new_haphic_results/04.build/contigs
+bsub  -J seqkit -n 2 -o seqkit.out -e seqkit.err -q normal "cat /data/home/hechao/20240629/3hifi+3ont.p_ctg.fa  | seqkit grep -f 3b_contig.txt > 3b_contig.fa"
+
+#第二步：
+#将调取的contig比对版本2，生成paf文件后转bed
+bsub -J align1 -n 70 -o align1.out -e align1.err -q normal "minimap2 -cx asm20 -n 10 -m 2500 -k 25 -w 19 --cap-kalloc=1g -e0 -f 50 -I20g -r1k,5k -A 10 -B 10 -t 70 /data/home/hechao/50hifi+50ont_haphic/04.build/YM33_withGap.fa 3b_contig.fa --secondary=no -o 3bcong_v2.paf"
+awk '{print $6"\t"$8"\t"$9"\t"$1"\t"$12"\t"$3"\t"$4}' 3bcong_v2.paf > 3bcong_v2.bed
+
+#第三步：
+#打开bed文件，添加列标题
+比对结果	5030_chr	5030_start	5030_end	target_ref	MAPQ	target_start	target_end
+#去掉表格中不是3B的行，按第一、二和三列排序，排序完后用第一行的第四列减去第二行的第三列，以此公式填充，随后从中选出为负值且两行的target_ref不同的行，添加5列辅助列，第一列为染色体编号，第二列为上一行的target_ref，第三列为上一行的5030_end+1、第四列为下一行的5030_start-1，第五列为下一行的target_ref,依次把所有的gap罗列出来，如下图所示：
+
+#第四步：
+#打开IGV，create genome：V2的3B，随后导入 3bcong_v2.bed文件
+#将上图中gap1-gap13的位置一一复制到igv对查询框，如果这个区间只有100bp长就跳过不用看了，如果能比对上则再添加一列，写明是完全能补完，还是补完还有一个gap
+#最后把结果放在30HIFI30ONT_chr对照.xlsx中，新建一个sheet
